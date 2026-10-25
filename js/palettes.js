@@ -133,7 +133,7 @@ const luma = ({ r, g, b }) => (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 const prepared = new Map();
 export function palette(key) {
   if (prepared.has(key)) return prepared.get(key);
-  const p = { ...(PALETTES[key] || PALETTES.pigments) };
+  const p = { ...(Object.hasOwn(PALETTES, key) ? PALETTES[key] : PALETTES.pigments) };
   p.groundRgb = hexToRgb(p.ground);
   p.dark = luma(p.groundRgb) < 0.45;
   p.rgb = {};
@@ -176,7 +176,7 @@ function readable(hex, ground, min = 4) {
 }
 
 export function cssVars(key) {
-  const p = PALETTES[key];
+  const p = Object.hasOwn(PALETTES, key) ? PALETTES[key] : PALETTES.pigments;
   const g = p.ground;
   const vars = {
     bg: g, fg: readable(p.fg, g, 7), sel: p.sel,

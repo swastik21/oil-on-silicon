@@ -1,4 +1,4 @@
-import { Painting, PASSES, MODES, MAX_CHARS, pickMode } from './painter.js';
+import { Painting, PASSES, MODES, pickMode } from './painter.js';
 import { PALETTES, BRUSH, cssVars } from './palettes.js';
 import { guessLanguage } from './syntax.js';
 import { SELF_PORTRAIT, WORKS, SAMPLE } from './works.js';
@@ -21,9 +21,12 @@ const statusLine = $('#studio-status');
 const signatureInput = $('#signature');
 const titleInput = $('#title');
 
+// own keys only: names like "__proto__" or "constructor" must not count as a palette
+const known = (palette, mode) => Object.hasOwn(PALETTES, palette) && Object.hasOwn(MODES, mode);
+
 const sample = { code: SAMPLE.code, palette: SAMPLE.palette, mode: SAMPLE.mode, modeChosen: true, title: SAMPLE.title, sign: '' };
 const saved = storage.get('studio');
-const state = saved && typeof saved.code === 'string' && PALETTES[saved.palette] && MODES[saved.mode]
+const state = saved && typeof saved.code === 'string' && known(saved.palette, saved.mode)
   ? { ...sample, ...saved, title: String(saved.title ?? 'Untitled'), sign: String(saved.sign ?? '') }
   : { ...sample };
 
@@ -226,8 +229,7 @@ export function openInStudio(work, scroll = true) {
 // visitor's own draft unless they start editing it
 export async function openFromLink() {
   const shared = await paintingInLink();
-  if (!shared || !PALETTES[shared.palette] || !MODES[shared.mode]) return false;
-  shared.code = shared.code.slice(0, MAX_CHARS);
+  if (!shared || !known(shared.palette, shared.mode)) return false;
   load({ ...shared, modeChosen: true }, 3.2, { remember: false });
   const note = $('#shared-note');
   note.textContent = `${shared.sign || 'Someone'} shared this painting with you. Change the code and it becomes yours.`;
