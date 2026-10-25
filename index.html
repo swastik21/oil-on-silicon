@@ -146,6 +146,7 @@
         </div>
 
         <div class="easel">
+          <p class="shared-note" id="shared-note" hidden></p>
           <figure class="work" id="studio-work">
             <div class="frame gilt">
               <div class="slip">
@@ -170,7 +171,13 @@
           <p class="buttons">
             <button class="button primary" id="repaint" type="button">Paint it again</button>
             <button class="button" id="save" type="button">Save image</button>
+            <button class="button" id="share" type="button">Share</button>
           </p>
+          <div class="share-links" id="share-links" hidden>
+            <label class="visually-hidden" for="share-url">Link to this painting</label>
+            <input id="share-url" readonly>
+            <p>Or post it on <a id="share-x" href="#" target="_blank" rel="noopener">X</a> or <a id="share-linkedin" href="#" target="_blank" rel="noopener">LinkedIn</a>.</p>
+          </div>
           <div class="legend">
             <h3>How code becomes paint</h3>
             <ul id="legend"></ul>

@@ -3,7 +3,7 @@ import { PALETTES, cssVars } from './palettes.js';
 import { SELF_PORTRAIT, WORKS } from './works.js';
 import { $, escapeHtml, reducedMotion, storage, showCode, measure, sizeCanvas, fontsReady } from './ui.js';
 import { attachLoupe, refreshLoupe } from './loupe.js';
-import { startStudio, openInStudio } from './studio.js';
+import { startStudio, openInStudio, openFromLink } from './studio.js';
 
 const speed = (seconds) => (reducedMotion ? 0 : seconds);
 
@@ -194,8 +194,12 @@ setUpLights();
 const portrait = setUpPortrait();
 const collection = hangCollection();
 
+// a shared link (#p=...) opens that painting in the studio
+window.addEventListener('hashchange', () => openFromLink());
+
 fontsReady.then(() => {
   portrait.paint();
+  openFromLink();
   // the rest of the page waits for the self-portrait, so the first painting is quick
   const wait = new Promise((resolve) => setTimeout(resolve, speed(6.5) * 1000));
   Promise.race([portrait.done, wait]).then(() => {

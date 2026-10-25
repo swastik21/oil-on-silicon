@@ -1,9 +1,12 @@
-import { Painting, PASSES, MODES, pickMode } from './painter.js';
+import { Painting, PASSES, MODES, MAX_CHARS, pickMode } from './painter.js';
 import { PALETTES, BRUSH, cssVars } from './palettes.js';
 import { guessLanguage } from './syntax.js';
 import { SELF_PORTRAIT, WORKS, SAMPLE } from './works.js';
 import { $, escapeHtml, reducedMotion, storage, showCode, measure, sizeCanvas } from './ui.js';
 import { attachLoupe, refreshLoupe } from './loupe.js';
+import { linkTo, paintingInLink } from './share.js';
+
+const SITE = 'swastik21.github.io/oil-on-silicon';
 
 const MUSEUM = ['pigments', 'fresco', 'nocturne', 'midcentury', 'phosphor', 'press', 'arena'];
 const EDITOR = ['monokai', 'dracula', 'solarized', 'nord', 'gruvbox'];
@@ -50,6 +53,7 @@ const painting = new Painting(canvas, {
       ? `Finished in ${p.plan.count.toLocaleString()} strokes. Look closer to read them.`
       : 'A blank file is a blank canvas. Type or paste some code.';
     refreshLoupe();
+    prepareShare();
   },
 });
 attachLoupe(canvas);
@@ -193,15 +197,16 @@ startFrom.addEventListener('change', () => {
   }
 });
 
-function load(changes, duration = 2.6) {
+function load(changes, duration = 2.6, { remember = true } = {}) {
   Object.assign(state, changes);
   textarea.value = state.code;
   textarea.scrollTop = textarea.scrollLeft = 0;
   titleInput.value = state.title;
+  signatureInput.value = state.sign;
   fitTitle();
   refresh();
   refreshChoices();
-  save();
+  if (remember) save();
   paint(duration);
 }
 
@@ -217,6 +222,24 @@ export function openInStudio(work, scroll = true) {
   if (scroll) $('#studio').scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
 }
 
+// someone sent a link to their painting: show it, but don't overwrite the
+// visitor's own draft unless they start editing it
+export async function openFromLink() {
+  const shared = await paintingInLink();
+  if (!shared || !PALETTES[shared.palette] || !MODES[shared.mode]) return false;
+  shared.code = shared.code.slice(0, MAX_CHARS);
+  load({ ...shared, modeChosen: true }, 3.2, { remember: false });
+  const note = $('#shared-note');
+  note.textContent = `${shared.sign || 'Someone'} shared this painting with you. Change the code and it becomes yours.`;
+  note.hidden = false;
+  // go straight to the painting; again once the headline fonts have
+  // arrived, because they change the height of everything above it
+  const show = () => $('#studio-work').scrollIntoView({ behavior: 'instant', block: 'center' });
+  show();
+  document.fonts.ready.then(() => requestAnimationFrame(show));
+  return true;
+}
+
 // --- the label ---
 
 // field-sizing does this in Chrome; size= is the fallback elsewhere
@@ -224,10 +247,18 @@ const fitTitle = () => {
   titleInput.size = Math.max(4, titleInput.value.length + 1);
 };
 
+// typing a name or title shouldn't rebuild the share picture on every key
+let shareTimer = 0;
+const prepareShareSoon = () => {
+  clearTimeout(shareTimer);
+  shareTimer = setTimeout(prepareShare, 600);
+};
+
 signatureInput.addEventListener('input', () => {
   state.sign = signatureInput.value;
   save();
-  if (!painting.resign(state.sign.trim())) painting.set({ signature: state.sign.trim() });
+  if (painting.resign(state.sign.trim())) prepareShareSoon();
+  else painting.set({ signature: state.sign.trim() });
 });
 
 titleInput.addEventListener('input', () => {
@@ -235,6 +266,7 @@ titleInput.addEventListener('input', () => {
   state.title = titleInput.value;
   save();
   refresh();
+  if (painting.state === 'done') prepareShareSoon();
 });
 
 // --- saving: the painting hung on a wall, with its label underneath ---
@@ -258,7 +290,7 @@ async function picture() {
 
   const u = canvas.width / 100;
   const pad = Math.round(u * 9), rim = Math.round(u * 1.6);
-  const W = canvas.width + pad * 2, H = canvas.height + pad * 2 + Math.round(u * 40);
+  const W = canvas.width + pad * 2, H = canvas.height + pad * 2 + Math.round(u * 45);
   const out = document.createElement('canvas');
   out.width = W;
   out.height = H;
@@ -291,6 +323,7 @@ async function picture() {
     [sans(400, fs), '#4b5458', `${guessLanguage(state.code)} on silicon, in the ${PALETTES[state.palette].name} palette`, fs * 1.7],
     [sans(400, fs), '#4b5458', measure(state.code).text, fs * 1.5],
     [serif(fs * 1.05), '#15191b', 'Oil on Silicon, International Artist Day 2026', fs * 2.6],
+    [sans(400, fs * 0.95), '#4b5458', `Paint your own code at ${SITE}`, fs * 1.6],
   ];
   let y = pad + canvas.height + rim + u * 9;
   for (const [font, colour, text, gap] of label) {
@@ -311,8 +344,7 @@ saveButton.addEventListener('click', async () => {
   saveButton.disabled = true;
   try {
     const blob = await picture();
-    const slug = (state.title.trim() || 'untitled').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'untitled';
-    const name = `oil-on-silicon-${slug}.png`;
+    const name = fileName();
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = name;
@@ -323,6 +355,58 @@ saveButton.addEventListener('click', async () => {
     statusLine.textContent = 'The image could not be made. Try painting it again, then save.';
   } finally {
     saveButton.disabled = false;
+  }
+});
+
+function fileName() {
+  const slug = (state.title.trim() || 'untitled').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return `oil-on-silicon-${slug || 'untitled'}.png`;
+}
+
+// --- sharing ---
+
+const onPhone = matchMedia('(pointer: coarse)').matches;
+const shareText = 'My code, painted. Paint yours on Oil on Silicon:';
+
+// The link and (on phones) the picture are made as soon as a painting is
+// finished. Safari only allows the share sheet straight after a tap, with
+// no slow work in between.
+let ready = null;
+let preparing = 0;
+async function prepareShare() {
+  const ticket = ++preparing;
+  ready = null;
+  const url = await linkTo(state);
+  let file = null;
+  if (onPhone && navigator.canShare) {
+    const blob = await picture();
+    const candidate = new File([blob], fileName(), { type: 'image/png' });
+    if (navigator.canShare({ files: [candidate] })) file = candidate;
+  }
+  if (ticket === preparing) ready = { url, file };
+}
+
+const shareButton = $('#share');
+shareButton.addEventListener('click', async () => {
+  const url = ready?.url ?? (await linkTo(state));
+  if (ready?.file) {
+    try {
+      await navigator.share({ files: [ready.file], text: `${shareText} ${url}` });
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return; // they closed the share sheet
+    }
+  }
+  $('#share-url').value = url;
+  $('#share-x').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}`;
+  $('#share-linkedin').href = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+  $('#share-links').hidden = false;
+  try {
+    await navigator.clipboard.writeText(url);
+    statusLine.textContent = 'Link copied. Anyone who opens it sees this exact painting.';
+  } catch {
+    statusLine.textContent = 'Copy the link below. Anyone who opens it sees this exact painting.';
+    $('#share-url').select();
   }
 });
 

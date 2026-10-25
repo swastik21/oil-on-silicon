@@ -36,6 +36,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 
@@ -351,6 +352,13 @@ legend { padding: 0; margin-bottom: 8px; font-size: var(--small); font-weight: 6
 .placard.editable #title { width: auto; max-width: calc(100% - 3.5em); min-width: 4ch; field-sizing: content; font: italic 1.2em var(--serif); }
 .status { min-height: 1.5em; text-align: center; font-size: var(--small); color: var(--ink-2); }
 .buttons { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.shared-note { text-align: center; font: italic 1.1rem var(--serif); }
+.share-links { display: grid; gap: 8px; justify-items: center; font-size: var(--small); color: var(--ink-2); }
+.share-links input {
+  width: 100%; max-width: 30rem; padding: 8px 10px;
+  border: 1px solid var(--line); border-radius: 2px; background: var(--card);
+  font: 12px var(--mono); color: var(--ink-2);
+}
 
 .legend { display: grid; gap: 10px; }
 .legend h3 { font: 600 var(--small) var(--sans); }
