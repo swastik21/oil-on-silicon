@@ -1,24 +1,21 @@
 # Oil on Silicon
 
-**Some artists use oil. We use syntax.**
+![Some artists use oil. We use syntax.](og.jpg)
 
-A small exhibition for International Artist Day (25 October, Pablo Picasso's birthday). Six famous programs, from Euclid's algorithm to the fast inverse square root in Quake III Arena, hang like paintings in a museum. Every painting is generated in your browser from the code on its label. Look closer and the brushstrokes turn back into code.
+An exhibition for International Artist Day, 25 October. Six well-known programs hang as paintings, from Euclid's algorithm (c. 300 BCE) to the fast inverse square root in Quake III Arena (1999), and each one is painted by its own source code. Hover over a painting and the brush marks turn out to be the code.
 
-**Visit:** https://swastik21.github.io/oil-on-silicon/
+https://swastik21.github.io/oil-on-silicon/
 
-## How code becomes paint
+The studio at the bottom of the page paints whatever code you paste into it. Same code, same painting, every time.
 
-| In the code | On the canvas |
-| --- | --- |
-| Brackets | underdrawing |
-| Keywords | bold strokes |
-| Functions | sweeping strokes |
-| Strings | long washes |
-| Numbers | dabs |
-| Comments | glazes |
+## Running it locally
 
-In the studio you can paste your own code, pick a palette (museum pigments, or editor themes like Monokai, Dracula, Solarized, Nord and Gruvbox) and a composition, sign it, and save it as a framed image. The same code always makes the same painting.
+There's no build step, but the scripts are ES modules, so the folder has to be served rather than opened as a file:
 
-## Run it locally
+    python3 -m http.server
 
-It is a single HTML file with no build step. Open `index.html` in a browser.
+and then open http://localhost:8000.
+
+## How it works
+
+`js/syntax.js` splits the code into tokens, and `js/painter.js` turns each token into brush strokes that follow a flow field. Brackets become the pencil underdrawing, comments become thin glazes, numbers become dabs, and the rest is painted in its syntax colour. Each stroke has its token's letters written along it, which is what the magnifier picks up.
