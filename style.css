@@ -374,6 +374,10 @@ legend { padding: 0; margin-bottom: 8px; font-size: var(--small); font-weight: 6
 .exit blockquote p { font: italic 500 var(--big)/1.15 var(--serif); text-wrap: balance; }
 .exit blockquote footer { font-size: var(--small); color: var(--ink-2); }
 .farewell { font-size: 1.1875rem; max-width: 34rem; }
+/* the exhibition is signed the way the paintings are */
+.maker { display: grid; gap: 8px; justify-items: center; }
+.signed { font: 3.4rem/1.1 "Herr Von Muellerhoff", "Snell Roundhand", cursive; color: var(--accent); transform: rotate(-4deg); }
+.maker > span:last-child { font-size: var(--small); color: var(--ink-2); }
 .colophon { max-width: 40rem; padding-top: 24px; border-top: 1px solid var(--line); font-size: var(--small); color: var(--ink-2); }
 
 /* the magnifier */
